@@ -2,6 +2,8 @@ export const LOKET_OPTIONS = [
   "Rawat Jalan Umum",
   "Rawat Jalan Eksekutif",
   "Rawat Inap",
+  "Verifikasi C1",
+  "Verifikasi C2",
 ] as const;
 
 export interface SurveyQuestion {
