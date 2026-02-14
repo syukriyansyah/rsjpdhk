@@ -8,8 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
-import { LogOut, Users, FileDown, ClipboardList } from "lucide-react";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend } from "recharts";
+import { LogOut, Users, FileDown, ClipboardList, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 
 interface SurveyResponse {
@@ -28,6 +28,15 @@ interface SurveyResponse {
 }
 
 const CHART_COLORS = ["#1e7ab5", "#22a87d", "#e6952b", "#d94545"];
+const ROWS_PER_PAGE = 10;
+
+const QUESTION_FIELD_MAP: Record<string, keyof SurveyResponse> = {
+  informasi_keuangan: "informasi_keuangan",
+  kecepatan_pelayanan: "kecepatan_pelayanan",
+  metode_pembayaran: "metode_pembayaran",
+  keramahan_petugas: "keramahan_petugas",
+  komunikasi_petugas: "komunikasi_petugas",
+};
 
 const AdminDashboard = () => {
   const [responses, setResponses] = useState<SurveyResponse[]>([]);
@@ -35,12 +44,17 @@ const AdminDashboard = () => {
   const [filterLoket, setFilterLoket] = useState<string>("all");
   const [filterDateFrom, setFilterDateFrom] = useState("");
   const [filterDateTo, setFilterDateTo] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
   const navigate = useNavigate();
 
   useEffect(() => {
     checkAuth();
     fetchData();
   }, []);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterLoket, filterDateFrom, filterDateTo]);
 
   const checkAuth = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -68,6 +82,12 @@ const AdminDashboard = () => {
     if (filterDateTo && new Date(r.created_at) > new Date(filterDateTo + "T23:59:59")) return false;
     return true;
   });
+
+  const totalPages = Math.max(1, Math.ceil(filteredResponses.length / ROWS_PER_PAGE));
+  const paginatedResponses = filteredResponses.slice(
+    (currentPage - 1) * ROWS_PER_PAGE,
+    currentPage * ROWS_PER_PAGE
+  );
 
   const getQuestionStats = (questionId: string) => {
     const q = SURVEY_QUESTIONS.find((q) => q.id === questionId)!;
@@ -201,7 +221,7 @@ const AdminDashboard = () => {
           </CardContent>
         </Card>
 
-        {/* Charts */}
+        {/* Charts per question */}
         {SURVEY_QUESTIONS.map((q) => {
           const stats = getQuestionStats(q.id);
           return (
@@ -210,12 +230,13 @@ const AdminDashboard = () => {
                 <CardTitle className="text-sm font-semibold leading-snug">{q.label}</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="h-48">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                  {/* Bar Chart */}
+                  <div className="h-52">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={stats}>
                         <CartesianGrid strokeDasharray="3 3" stroke="hsl(210,20%,90%)" />
-                        <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                        <XAxis dataKey="name" tick={{ fontSize: 10 }} />
                         <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
                         <Tooltip />
                         <Bar dataKey="count" radius={[4, 4, 0, 0]}>
@@ -226,6 +247,30 @@ const AdminDashboard = () => {
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
+                  {/* Pie Chart */}
+                  <div className="h-52">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={stats}
+                          dataKey="count"
+                          nameKey="name"
+                          cx="50%"
+                          cy="50%"
+                          outerRadius={70}
+                          label={({ name, percent }) => `${name.split(" ").pop()} ${(percent * 100).toFixed(0)}%`}
+                          labelLine={false}
+                          fontSize={10}
+                        >
+                          {stats.map((_, i) => (
+                            <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                  {/* Table */}
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -254,43 +299,107 @@ const AdminDashboard = () => {
           );
         })}
 
-        {/* Recent Responses Table */}
+        {/* Responses Table with full answers & pagination */}
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Data Responden Terbaru</CardTitle>
+            <CardTitle className="text-base">Data Responden ({filteredResponses.length} data)</CardTitle>
           </CardHeader>
           <CardContent className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Tanggal</TableHead>
-                  <TableHead>Loket</TableHead>
-                  <TableHead>Nama</TableHead>
-                  <TableHead>No. MR</TableHead>
-                  <TableHead>Kritik & Saran</TableHead>
+                  <TableHead className="whitespace-nowrap">No</TableHead>
+                  <TableHead className="whitespace-nowrap">Tanggal</TableHead>
+                  <TableHead className="whitespace-nowrap">Loket</TableHead>
+                  <TableHead className="whitespace-nowrap">Nama</TableHead>
+                  <TableHead className="whitespace-nowrap">No. MR</TableHead>
+                  <TableHead className="whitespace-nowrap">No. HP</TableHead>
+                  {SURVEY_QUESTIONS.map((q) => (
+                    <TableHead key={q.id} className="whitespace-nowrap text-xs max-w-[120px]" title={q.label}>
+                      {q.label.length > 30 ? q.label.substring(0, 28) + "…" : q.label}
+                    </TableHead>
+                  ))}
+                  <TableHead className="whitespace-nowrap">Kritik & Saran</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredResponses.slice(0, 20).map((r) => (
+                {paginatedResponses.map((r, idx) => (
                   <TableRow key={r.id}>
+                    <TableCell className="text-sm">{(currentPage - 1) * ROWS_PER_PAGE + idx + 1}</TableCell>
                     <TableCell className="text-sm whitespace-nowrap">
                       {new Date(r.created_at).toLocaleDateString("id-ID")}
                     </TableCell>
                     <TableCell className="text-sm">{r.loket}</TableCell>
                     <TableCell className="text-sm">{r.nama}</TableCell>
                     <TableCell className="text-sm">{r.no_mr}</TableCell>
-                    <TableCell className="text-sm max-w-xs truncate">{r.kritik_saran || "-"}</TableCell>
+                    <TableCell className="text-sm">{r.no_hp}</TableCell>
+                    {SURVEY_QUESTIONS.map((q) => (
+                      <TableCell key={q.id} className="text-sm">
+                        {r[QUESTION_FIELD_MAP[q.id]]}
+                      </TableCell>
+                    ))}
+                    <TableCell className="text-sm max-w-[200px] truncate">{r.kritik_saran || "-"}</TableCell>
                   </TableRow>
                 ))}
                 {filteredResponses.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={6 + SURVEY_QUESTIONS.length + 1} className="text-center text-muted-foreground py-8">
                       Belum ada data survei
                     </TableCell>
                   </TableRow>
                 )}
               </TableBody>
             </Table>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between mt-4 pt-4 border-t">
+                <p className="text-sm text-muted-foreground">
+                  Halaman {currentPage} dari {totalPages}
+                </p>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </Button>
+                  {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                    let page: number;
+                    if (totalPages <= 5) {
+                      page = i + 1;
+                    } else if (currentPage <= 3) {
+                      page = i + 1;
+                    } else if (currentPage >= totalPages - 2) {
+                      page = totalPages - 4 + i;
+                    } else {
+                      page = currentPage - 2 + i;
+                    }
+                    return (
+                      <Button
+                        key={page}
+                        variant={page === currentPage ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setCurrentPage(page)}
+                        className="w-8 h-8 p-0"
+                      >
+                        {page}
+                      </Button>
+                    );
+                  })}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       </main>
