@@ -94,13 +94,18 @@ const Index = () => {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="bg-primary text-primary-foreground py-6 px-4 shadow-md">
-        <div className="max-w-2xl mx-auto flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-primary-foreground/20 flex items-center justify-center">
-            <ClipboardList className="w-6 h-6" />
+        <div className="max-w-2xl mx-auto flex items-center gap-4">
+          <div className="w-14 h-14 bg-white rounded-lg shadow-sm flex items-center justify-center p-1.5 overflow-hidden">
+            <img
+              src="/logo.png"
+              alt="Logo RSJPDHK"
+              className="w-full h-full object-contain"
+              onError={(e) => { e.currentTarget.src = '/placeholder.svg' }}
+            />
           </div>
           <div>
-            <h1 className="text-xl font-bold leading-tight">Survei Kepuasan Pelayanan</h1>
-            <p className="text-sm opacity-80">Administrasi Keuangan Rumah Sakit</p>
+            <h1 className="text-xl font-bold leading-tight">Survei Kepuasan Pelayanan Administrasi Keuangan</h1>
+            <p className="text-xs opacity-80 mt-1">RS Jantung dan Pembuluh Darah Harapan Kita</p>
           </div>
         </div>
       </header>

@@ -31,8 +31,8 @@ const AdminLogin = () => {
   const handleSignUp = async () => {
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signUp({ 
-        email, 
+      const { error } = await supabase.auth.signUp({
+        email,
         password,
         options: { emailRedirectTo: window.location.origin }
       });
@@ -49,11 +49,16 @@ const AdminLogin = () => {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="max-w-sm w-full shadow-lg">
         <CardHeader className="text-center space-y-2">
-          <div className="mx-auto w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-            <ShieldCheck className="w-6 h-6 text-primary" />
+          <div className="mx-auto w-20 h-20 bg-white rounded-xl shadow-sm border p-2 flex items-center justify-center mb-2">
+            <img
+              src="/logo.png"
+              alt="Logo RSJPDHK"
+              className="w-full h-full object-contain"
+              onError={(e) => { e.currentTarget.src = '/placeholder.svg' }}
+            />
           </div>
           <CardTitle className="text-xl">Login Admin</CardTitle>
-          <p className="text-sm text-muted-foreground">Masuk untuk melihat hasil survei</p>
+          <p className="text-sm text-muted-foreground">Admin Survei Kepuasan<br />RS Jantung dan Pembuluh Darah Harapan Kita</p>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">

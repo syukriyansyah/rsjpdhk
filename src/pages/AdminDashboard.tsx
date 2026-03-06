@@ -142,10 +142,17 @@ const AdminDashboard = () => {
       <header className="bg-primary text-primary-foreground py-4 px-4 shadow-md">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <ClipboardList className="w-6 h-6" />
+            <div className="w-12 h-12 bg-white rounded flex items-center justify-center p-1 shadow-sm overflow-hidden">
+              <img
+                src="/logo.png"
+                alt="Logo RSJPDHK"
+                className="w-full h-full object-contain"
+                onError={(e) => { e.currentTarget.src = '/placeholder.svg' }}
+              />
+            </div>
             <div>
               <h1 className="text-lg font-bold">Dashboard Admin</h1>
-              <p className="text-xs opacity-80">Survei Kepuasan Pelayanan</p>
+              <p className="text-xs opacity-80 mt-1">Survei Kepuasan - RS Jantung dan Pembuluh Darah Harapan Kita</p>
             </div>
           </div>
           <Button variant="ghost" size="sm" className="text-primary-foreground hover:bg-primary-foreground/10" onClick={handleLogout}>
