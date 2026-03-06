@@ -90,9 +90,7 @@ const AdminLogin = () => {
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? "Memproses..." : "Masuk"}
             </Button>
-            <Button type="button" variant="outline" className="w-full" onClick={handleSignUp} disabled={loading}>
-              Daftar Akun Admin Baru
-            </Button>
+
           </form>
         </CardContent>
       </Card>
