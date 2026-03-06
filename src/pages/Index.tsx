@@ -204,13 +204,6 @@ const Index = () => {
             {loading ? "Mengirim..." : "Kirim Survei"}
           </Button>
         </form>
-
-        <div className="mt-8 text-center">
-          <Link to="/admin" className="text-sm text-muted-foreground hover:text-primary inline-flex items-center gap-1">
-            <ShieldCheck className="w-4 h-4" />
-            Login Admin
-          </Link>
-        </div>
       </main>
     </div>
   );
