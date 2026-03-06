@@ -315,8 +315,8 @@ const AdminDashboard = () => {
                   <TableHead className="whitespace-nowrap">No. MR</TableHead>
                   <TableHead className="whitespace-nowrap">No. HP</TableHead>
                   {SURVEY_QUESTIONS.map((q) => (
-                    <TableHead key={q.id} className="whitespace-nowrap text-xs max-w-[120px]" title={q.label}>
-                      {q.label.length > 30 ? q.label.substring(0, 28) + "…" : q.label}
+                    <TableHead key={q.id} className="whitespace-normal min-w-[150px] text-xs leading-tight" title={q.label}>
+                      {q.label}
                     </TableHead>
                   ))}
                   <TableHead className="whitespace-nowrap">Kritik & Saran</TableHead>
