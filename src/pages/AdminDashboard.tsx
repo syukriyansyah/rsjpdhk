@@ -62,7 +62,21 @@ const AdminDashboard = () => {
 
   const checkAuth = async () => {
     const { data: { session } } = await supabase.auth.getSession();
-    if (!session) navigate("/admin");
+    if (!session) {
+      navigate("/admin");
+      return;
+    }
+    // Verify user is an approved admin
+    const { data: adminRecord } = await supabase
+      .from("admin_users")
+      .select("user_id")
+      .eq("user_id", session.user.id)
+      .maybeSingle();
+    if (!adminRecord) {
+      toast.error("Anda tidak memiliki akses admin.");
+      await supabase.auth.signOut();
+      navigate("/admin");
+    }
   };
 
   const fetchData = async () => {
