@@ -99,11 +99,11 @@ const Index = () => {
       {/* Header */}
       <header className="bg-primary text-primary-foreground py-6 px-4 shadow-md">
         <div className="max-w-2xl mx-auto flex items-center gap-4">
-          <div className="w-14 h-14 bg-white rounded-lg shadow-sm flex items-center justify-center p-1.5 overflow-hidden">
+          <div className="w-40 h-12 bg-white rounded-lg shadow-sm flex items-center justify-center p-1.5 overflow-hidden">
             <img
-              src="/logo.png"
+              src="/rsdjp.png"
               alt="Logo RSJPDHK"
-              className="w-full h-full object-contain"
+              className="w-full h-full object-cover"
               onError={(e) => { e.currentTarget.src = '/placeholder.svg' }}
             />
           </div>
