@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { SURVEY_QUESTIONS, LOKET_OPTIONS } from "@/lib/surveyQuestions";
+import { SURVEY_QUESTIONS, LOKET_OPTIONS, JAMINAN_OPTIONS } from "@/lib/surveyQuestions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -15,6 +15,7 @@ import { toast } from "sonner";
 interface SurveyResponse {
   id: string;
   loket: string;
+  jaminan: string;
   nama: string;
   no_mr: string;
   no_hp: string;
@@ -42,6 +43,7 @@ const AdminDashboard = () => {
   const [responses, setResponses] = useState<SurveyResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterLoket, setFilterLoket] = useState<string>("all");
+  const [filterJaminan, setFilterJaminan] = useState<string>("all");
   const [filterDateFrom, setFilterDateFrom] = useState("");
   const [filterDateTo, setFilterDateTo] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -54,7 +56,7 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [filterLoket, filterDateFrom, filterDateTo]);
+  }, [filterLoket, filterJaminan, filterDateFrom, filterDateTo]);
 
   const checkAuth = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -78,6 +80,7 @@ const AdminDashboard = () => {
 
   const filteredResponses = responses.filter((r) => {
     if (filterLoket !== "all" && r.loket !== filterLoket) return false;
+    if (filterJaminan !== "all" && r.jaminan !== filterJaminan) return false;
     if (filterDateFrom && new Date(r.created_at) < new Date(filterDateFrom)) return false;
     if (filterDateTo && new Date(r.created_at) > new Date(filterDateTo + "T23:59:59")) return false;
     return true;
@@ -103,10 +106,11 @@ const AdminDashboard = () => {
   };
 
   const exportCSV = () => {
-    const headers = ["Tanggal", "Loket", "Nama", "No MR", "No HP", ...SURVEY_QUESTIONS.map(q => q.label), "Kritik & Saran"];
+    const headers = ["Tanggal", "Loket", "Jaminan", "Nama", "No MR", "No HP", ...SURVEY_QUESTIONS.map(q => q.label), "Kritik & Saran"];
     const rows = filteredResponses.map((r) => [
       new Date(r.created_at).toLocaleDateString("id-ID"),
       r.loket,
+      r.jaminan,
       r.nama,
       r.no_mr,
       r.no_hp,
@@ -201,7 +205,7 @@ const AdminDashboard = () => {
             <CardTitle className="text-base">Filter Data</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
               <div>
                 <Label>Loket</Label>
                 <Select value={filterLoket} onValueChange={setFilterLoket}>
@@ -212,6 +216,20 @@ const AdminDashboard = () => {
                     <SelectItem value="all">Semua Loket</SelectItem>
                     {LOKET_OPTIONS.map((l) => (
                       <SelectItem key={l} value={l}>{l}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Jaminan</Label>
+                <Select value={filterJaminan} onValueChange={setFilterJaminan}>
+                  <SelectTrigger className="mt-1">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Semua Jaminan</SelectItem>
+                    {JAMINAN_OPTIONS.map((j) => (
+                      <SelectItem key={j} value={j}>{j}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -318,6 +336,7 @@ const AdminDashboard = () => {
                   <TableHead className="whitespace-nowrap">No</TableHead>
                   <TableHead className="whitespace-nowrap">Tanggal</TableHead>
                   <TableHead className="whitespace-nowrap">Loket</TableHead>
+                  <TableHead className="whitespace-nowrap">Jaminan</TableHead>
                   <TableHead className="whitespace-nowrap">Nama</TableHead>
                   <TableHead className="whitespace-nowrap">No. MR</TableHead>
                   <TableHead className="whitespace-nowrap">No. HP</TableHead>
@@ -337,6 +356,7 @@ const AdminDashboard = () => {
                       {new Date(r.created_at).toLocaleDateString("id-ID")}
                     </TableCell>
                     <TableCell className="text-sm">{r.loket}</TableCell>
+                    <TableCell className="text-sm">{r.jaminan}</TableCell>
                     <TableCell className="text-sm">{r.nama}</TableCell>
                     <TableCell className="text-sm">{r.no_mr}</TableCell>
                     <TableCell className="text-sm">{r.no_hp}</TableCell>
@@ -350,7 +370,7 @@ const AdminDashboard = () => {
                 ))}
                 {filteredResponses.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={6 + SURVEY_QUESTIONS.length + 1} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={7 + SURVEY_QUESTIONS.length + 1} className="text-center text-muted-foreground py-8">
                       Belum ada data survei
                     </TableCell>
                   </TableRow>

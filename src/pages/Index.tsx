@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
-import { LOKET_OPTIONS, SURVEY_QUESTIONS } from "@/lib/surveyQuestions";
+import { LOKET_OPTIONS, JAMINAN_OPTIONS, SURVEY_QUESTIONS } from "@/lib/surveyQuestions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -16,6 +16,7 @@ import { toast } from "sonner";
 
 const surveySchema = z.object({
   loket: z.string().min(1, "Pilih loket"),
+  jaminan: z.string().min(1, "Pilih jaminan"),
   nama: z.string().trim().min(1, "Nama wajib diisi").max(100),
   no_mr: z.string().trim().min(1, "No. MR wajib diisi").max(50),
   no_hp: z.string().trim().min(1, "No. HP wajib diisi").max(20),
@@ -43,6 +44,7 @@ const Index = () => {
     resolver: zodResolver(surveySchema),
     defaultValues: {
       loket: "",
+      jaminan: "",
       nama: "",
       no_mr: "",
       no_hp: "",
@@ -130,6 +132,27 @@ const Index = () => {
                 ))}
               </RadioGroup>
               {errors.loket && <p className="text-sm text-destructive mt-1">{errors.loket.message}</p>}
+            </CardContent>
+          </Card>
+
+          {/* Jaminan */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base font-semibold">Jaminan <span className="text-destructive">*</span></CardTitle>
+            </CardHeader>
+            <CardContent>
+              <RadioGroup
+                value={watch("jaminan")}
+                onValueChange={(v) => setValue("jaminan", v, { shouldValidate: true })}
+              >
+                {JAMINAN_OPTIONS.map((opt) => (
+                  <div key={opt} className="flex items-center gap-3 py-1">
+                    <RadioGroupItem value={opt} id={`jaminan-${opt}`} />
+                    <Label htmlFor={`jaminan-${opt}`} className="cursor-pointer font-normal">{opt}</Label>
+                  </div>
+                ))}
+              </RadioGroup>
+              {errors.jaminan && <p className="text-sm text-destructive mt-1">{errors.jaminan.message}</p>}
             </CardContent>
           </Card>
 

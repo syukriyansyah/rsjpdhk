@@ -1,9 +1,13 @@
 export const LOKET_OPTIONS = [
-  "Rawat Jalan Umum",
-  "Rawat Jalan Eksekutif",
+  "Rawat Jalan",
   "Rawat Inap",
-  "Verifikasi C1",
-  "Verifikasi C2",
+] as const;
+
+export const JAMINAN_OPTIONS = [
+  "Pribadi",
+  "Asuransi",
+  "Perusahaan",
+  "BPJS Naik Kelas",
 ] as const;
 
 export interface SurveyQuestion {
