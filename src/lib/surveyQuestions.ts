@@ -10,6 +10,11 @@ export const JAMINAN_OPTIONS = [
   "BPJS Naik Kelas",
 ] as const;
 
+export const LAYANAN_OPTIONS = [
+  "Rawat Jalan",
+  "Rawat Inap",
+] as const;
+
 export interface SurveyQuestion {
   id: string;
   label: string;
@@ -65,3 +70,19 @@ export function getTotalScore(response: Record<string, string>): number {
     0
   );
 }
+
+/** Get score category based on total score */
+export function getScoreCategory(score: number): string {
+  if (score > 85) return "Sangat Puas";
+  if (score > 70) return "Puas";
+  if (score > 50) return "Kurang Puas";
+  return "Tidak Puas";
+}
+
+export const SCORE_CATEGORIES = ["Sangat Puas", "Puas", "Kurang Puas", "Tidak Puas"] as const;
+export const CATEGORY_COLORS: Record<string, string> = {
+  "Sangat Puas": "#22a87d",
+  "Puas": "#1e7ab5",
+  "Kurang Puas": "#e6952b",
+  "Tidak Puas": "#d94545",
+};

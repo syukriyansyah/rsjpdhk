@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
-import { LOKET_OPTIONS, JAMINAN_OPTIONS, SURVEY_QUESTIONS } from "@/lib/surveyQuestions";
+import { LOKET_OPTIONS, JAMINAN_OPTIONS, LAYANAN_OPTIONS, SURVEY_QUESTIONS } from "@/lib/surveyQuestions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -17,6 +17,7 @@ import { toast } from "sonner";
 const surveySchema = z.object({
   loket: z.string().min(1, "Pilih loket"),
   jaminan: z.string().min(1, "Pilih jaminan"),
+  layanan: z.string().min(1, "Pilih layanan"),
   nama: z.string().trim().min(1, "Nama wajib diisi").max(100),
   no_mr: z.string().trim().min(1, "No. MR wajib diisi").max(50),
   no_hp: z.string().trim().min(1, "No. HP wajib diisi").max(20),
@@ -45,6 +46,7 @@ const Index = () => {
     defaultValues: {
       loket: "",
       jaminan: "",
+      layanan: "",
       nama: "",
       no_mr: "",
       no_hp: "",
@@ -153,6 +155,27 @@ const Index = () => {
                 ))}
               </RadioGroup>
               {errors.jaminan && <p className="text-sm text-destructive mt-1">{errors.jaminan.message}</p>}
+            </CardContent>
+          </Card>
+
+          {/* Layanan */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base font-semibold">Layanan <span className="text-destructive">*</span></CardTitle>
+            </CardHeader>
+            <CardContent>
+              <RadioGroup
+                value={watch("layanan")}
+                onValueChange={(v) => setValue("layanan", v, { shouldValidate: true })}
+              >
+                {LAYANAN_OPTIONS.map((opt) => (
+                  <div key={opt} className="flex items-center gap-3 py-1">
+                    <RadioGroupItem value={opt} id={`layanan-${opt}`} />
+                    <Label htmlFor={`layanan-${opt}`} className="cursor-pointer font-normal">{opt}</Label>
+                  </div>
+                ))}
+              </RadioGroup>
+              {errors.layanan && <p className="text-sm text-destructive mt-1">{errors.layanan.message}</p>}
             </CardContent>
           </Card>
 

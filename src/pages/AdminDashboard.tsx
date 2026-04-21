@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { SURVEY_QUESTIONS, LOKET_OPTIONS, JAMINAN_OPTIONS, getAnswerScore, getTotalScore, MAX_TOTAL_SCORE } from "@/lib/surveyQuestions";
+import { SURVEY_QUESTIONS, LOKET_OPTIONS, JAMINAN_OPTIONS, LAYANAN_OPTIONS, getAnswerScore, getTotalScore, MAX_TOTAL_SCORE, getScoreCategory, SCORE_CATEGORIES, CATEGORY_COLORS } from "@/lib/surveyQuestions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -16,6 +16,7 @@ interface SurveyResponse {
   id: string;
   loket: string;
   jaminan: string;
+  layanan: string;
   nama: string;
   no_mr: string;
   no_hp: string;
@@ -28,7 +29,7 @@ interface SurveyResponse {
   created_at: string;
 }
 
-const CHART_COLORS = ["#1e7ab5", "#22a87d", "#e6952b", "#d94545"];
+const CHART_COLORS = ["#1e7ab5", "#22a87d", "#e6952b", "#d94545", "#8b5cf6", "#ec4899"];
 const ROWS_PER_PAGE = 10;
 
 const QUESTION_FIELD_MAP: Record<string, keyof SurveyResponse> = {
@@ -44,6 +45,7 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [filterLoket, setFilterLoket] = useState<string>("all");
   const [filterJaminan, setFilterJaminan] = useState<string>("all");
+  const [filterLayanan, setFilterLayanan] = useState<string>("all");
   const [filterDateFrom, setFilterDateFrom] = useState("");
   const [filterDateTo, setFilterDateTo] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -56,7 +58,7 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [filterLoket, filterJaminan, filterDateFrom, filterDateTo]);
+  }, [filterLoket, filterJaminan, filterLayanan, filterDateFrom, filterDateTo]);
 
   const checkAuth = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -81,6 +83,7 @@ const AdminDashboard = () => {
   const filteredResponses = responses.filter((r) => {
     if (filterLoket !== "all" && r.loket !== filterLoket) return false;
     if (filterJaminan !== "all" && r.jaminan !== filterJaminan) return false;
+    if (filterLayanan !== "all" && r.layanan !== filterLayanan) return false;
     if (filterDateFrom && new Date(r.created_at) < new Date(filterDateFrom)) return false;
     if (filterDateTo && new Date(r.created_at) > new Date(filterDateTo + "T23:59:59")) return false;
     return true;
@@ -100,6 +103,26 @@ const AdminDashboard = () => {
     }));
   };
 
+  /** Get breakdown stats by a grouping field (loket, jaminan, layanan) */
+  const getGroupBreakdown = (groupField: keyof SurveyResponse, options: readonly string[]) => {
+    return options.map((opt) => {
+      const groupResponses = filteredResponses.filter((r) => r[groupField] === opt);
+      const count = groupResponses.length;
+      const avgScore = count > 0
+        ? groupResponses.reduce((sum, r) => sum + getTotalScore(r as unknown as Record<string, string>), 0) / count
+        : 0;
+      const category = count > 0 ? getScoreCategory(avgScore) : "-";
+
+      // Count per category
+      const categoryCounts = SCORE_CATEGORIES.map((cat) => ({
+        name: cat,
+        count: groupResponses.filter((r) => getScoreCategory(getTotalScore(r as unknown as Record<string, string>)) === cat).length,
+      }));
+
+      return { name: opt, count, avgScore: Math.round(avgScore * 10) / 10, category, categoryCounts };
+    });
+  };
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
     navigate("/admin");
@@ -107,23 +130,28 @@ const AdminDashboard = () => {
 
   const exportCSV = () => {
     const scoreHeaders = SURVEY_QUESTIONS.map(q => `Skor: ${q.label}`);
-    const headers = ["Tanggal", "Loket", "Jaminan", "Nama", "No MR", "No HP", ...SURVEY_QUESTIONS.map(q => q.label), ...scoreHeaders, "Total Skor", "Kritik & Saran"];
-    const rows = filteredResponses.map((r) => [
-      new Date(r.created_at).toLocaleDateString("id-ID"),
-      r.loket,
-      r.jaminan,
-      r.nama,
-      r.no_mr,
-      r.no_hp,
-      r.informasi_keuangan,
-      r.kecepatan_pelayanan,
-      r.metode_pembayaran,
-      r.keramahan_petugas,
-      r.komunikasi_petugas,
-      ...SURVEY_QUESTIONS.map(q => getAnswerScore(q.id, r[QUESTION_FIELD_MAP[q.id]] as string).toString()),
-      getTotalScore(r as unknown as Record<string, string>).toString(),
-      r.kritik_saran || "",
-    ]);
+    const headers = ["Tanggal", "Loket", "Jaminan", "Layanan", "Nama", "No MR", "No HP", ...SURVEY_QUESTIONS.map(q => q.label), ...scoreHeaders, "Total Skor", "Kategori", "Kritik & Saran"];
+    const rows = filteredResponses.map((r) => {
+      const totalScore = getTotalScore(r as unknown as Record<string, string>);
+      return [
+        new Date(r.created_at).toLocaleDateString("id-ID"),
+        r.loket,
+        r.jaminan,
+        r.layanan,
+        r.nama,
+        r.no_mr,
+        r.no_hp,
+        r.informasi_keuangan,
+        r.kecepatan_pelayanan,
+        r.metode_pembayaran,
+        r.keramahan_petugas,
+        r.komunikasi_petugas,
+        ...SURVEY_QUESTIONS.map(q => getAnswerScore(q.id, r[QUESTION_FIELD_MAP[q.id]] as string).toString()),
+        totalScore.toString(),
+        getScoreCategory(totalScore),
+        r.kritik_saran || "",
+      ];
+    });
 
     const csv = [headers, ...rows].map((row) => row.map((c) => `"${c}"`).join(",")).join("\n");
     const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
@@ -143,6 +171,10 @@ const AdminDashboard = () => {
       </div>
     );
   }
+
+  const loketBreakdown = getGroupBreakdown("loket", LOKET_OPTIONS);
+  const jaminanBreakdown = getGroupBreakdown("jaminan", JAMINAN_OPTIONS);
+  const layananBreakdown = getGroupBreakdown("layanan", LAYANAN_OPTIONS);
 
   return (
     <div className="min-h-screen bg-background">
@@ -224,7 +256,7 @@ const AdminDashboard = () => {
             <CardTitle className="text-base">Filter Data</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-5 gap-4">
               <div>
                 <Label>Loket</Label>
                 <Select value={filterLoket} onValueChange={setFilterLoket}>
@@ -254,6 +286,20 @@ const AdminDashboard = () => {
                 </Select>
               </div>
               <div>
+                <Label>Layanan</Label>
+                <Select value={filterLayanan} onValueChange={setFilterLayanan}>
+                  <SelectTrigger className="mt-1">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Semua Layanan</SelectItem>
+                    {LAYANAN_OPTIONS.map((l) => (
+                      <SelectItem key={l} value={l}>{l}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
                 <Label>Dari Tanggal</Label>
                 <Input type="date" value={filterDateFrom} onChange={(e) => setFilterDateFrom(e.target.value)} className="mt-1" />
               </div>
@@ -264,6 +310,106 @@ const AdminDashboard = () => {
             </div>
           </CardContent>
         </Card>
+
+        {/* Breakdown Charts: Loket, Jaminan, Layanan */}
+        {[
+          { title: "Analisis per Loket", data: loketBreakdown, field: "loket" },
+          { title: "Analisis per Jaminan", data: jaminanBreakdown, field: "jaminan" },
+          { title: "Analisis per Layanan", data: layananBreakdown, field: "layanan" },
+        ].map(({ title, data }) => (
+          <Card key={title}>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base font-semibold">{title}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Average Score Bar Chart */}
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground mb-2">Rata-rata Skor & Kategori</p>
+                  <div className="h-56">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={data} layout="vertical">
+                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(210,20%,90%)" />
+                        <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 11 }} />
+                        <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={120} />
+                        <Tooltip
+                          formatter={(value: number) => [`${value} / ${MAX_TOTAL_SCORE}`, "Rata-rata Skor"]}
+                          labelFormatter={(label) => `${label}`}
+                        />
+                        <Bar dataKey="avgScore" radius={[0, 4, 4, 0]}>
+                          {data.map((entry, i) => (
+                            <Cell key={i} fill={CATEGORY_COLORS[entry.category] || CHART_COLORS[i % CHART_COLORS.length]} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+                {/* Category Distribution Pie Chart per group */}
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground mb-2">Distribusi Kategori Skor</p>
+                  <div className="h-56">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={SCORE_CATEGORIES.map((cat) => ({
+                            name: cat,
+                            count: filteredResponses.filter((r) => getScoreCategory(getTotalScore(r as unknown as Record<string, string>)) === cat).length,
+                          })).filter(d => d.count > 0)}
+                          dataKey="count"
+                          nameKey="name"
+                          cx="50%"
+                          cy="50%"
+                          outerRadius={75}
+                          label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                          labelLine={false}
+                          fontSize={10}
+                        >
+                          {SCORE_CATEGORIES.map((cat) => (
+                            <Cell key={cat} fill={CATEGORY_COLORS[cat]} />
+                          ))}
+                        </Pie>
+                        <Tooltip />
+                        <Legend fontSize={11} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              </div>
+              {/* Summary Table */}
+              <Table className="mt-4">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Kelompok</TableHead>
+                    <TableHead className="text-right">Jumlah</TableHead>
+                    <TableHead className="text-right">Rata-rata Skor</TableHead>
+                    <TableHead className="text-center">Kategori</TableHead>
+                    {SCORE_CATEGORIES.map((cat) => (
+                      <TableHead key={cat} className="text-center text-xs">{cat}</TableHead>
+                    ))}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {data.map((d) => (
+                    <TableRow key={d.name}>
+                      <TableCell className="font-medium">{d.name}</TableCell>
+                      <TableCell className="text-right">{d.count}</TableCell>
+                      <TableCell className="text-right font-semibold">{d.avgScore}</TableCell>
+                      <TableCell className="text-center">
+                        <span className="px-2 py-0.5 rounded-full text-xs font-medium text-white" style={{ backgroundColor: CATEGORY_COLORS[d.category] || "#888" }}>
+                          {d.category}
+                        </span>
+                      </TableCell>
+                      {d.categoryCounts.map((cc) => (
+                        <TableCell key={cc.name} className="text-center">{cc.count}</TableCell>
+                      ))}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        ))}
 
         {/* Charts per question */}
         {SURVEY_QUESTIONS.map((q) => {
@@ -356,6 +502,7 @@ const AdminDashboard = () => {
                   <TableHead className="whitespace-nowrap">Tanggal</TableHead>
                   <TableHead className="whitespace-nowrap">Loket</TableHead>
                   <TableHead className="whitespace-nowrap">Jaminan</TableHead>
+                  <TableHead className="whitespace-nowrap">Layanan</TableHead>
                   <TableHead className="whitespace-nowrap">Nama</TableHead>
                   <TableHead className="whitespace-nowrap">No. MR</TableHead>
                   <TableHead className="whitespace-nowrap">No. HP</TableHead>
@@ -368,40 +515,51 @@ const AdminDashboard = () => {
                     <TableHead key={`score-${q.id}`} className="whitespace-nowrap text-center text-xs">Skor</TableHead>
                   ))}
                   <TableHead className="whitespace-nowrap text-center">Total Skor</TableHead>
+                  <TableHead className="whitespace-nowrap text-center">Kategori</TableHead>
                   <TableHead className="whitespace-nowrap">Kritik & Saran</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {paginatedResponses.map((r, idx) => (
-                  <TableRow key={r.id}>
-                    <TableCell className="text-sm">{(currentPage - 1) * ROWS_PER_PAGE + idx + 1}</TableCell>
-                    <TableCell className="text-sm whitespace-nowrap">
-                      {new Date(r.created_at).toLocaleDateString("id-ID")}
-                    </TableCell>
-                    <TableCell className="text-sm">{r.loket}</TableCell>
-                    <TableCell className="text-sm">{r.jaminan}</TableCell>
-                    <TableCell className="text-sm">{r.nama}</TableCell>
-                    <TableCell className="text-sm">{r.no_mr}</TableCell>
-                    <TableCell className="text-sm">{r.no_hp}</TableCell>
-                    {SURVEY_QUESTIONS.map((q) => (
-                      <TableCell key={q.id} className="text-sm">
-                        {r[QUESTION_FIELD_MAP[q.id]]}
+                {paginatedResponses.map((r, idx) => {
+                  const totalScore = getTotalScore(r as unknown as Record<string, string>);
+                  const category = getScoreCategory(totalScore);
+                  return (
+                    <TableRow key={r.id}>
+                      <TableCell className="text-sm">{(currentPage - 1) * ROWS_PER_PAGE + idx + 1}</TableCell>
+                      <TableCell className="text-sm whitespace-nowrap">
+                        {new Date(r.created_at).toLocaleDateString("id-ID")}
                       </TableCell>
-                    ))}
-                    {SURVEY_QUESTIONS.map((q) => (
-                      <TableCell key={`score-${q.id}`} className="text-sm text-center font-medium">
-                        {getAnswerScore(q.id, r[QUESTION_FIELD_MAP[q.id]] as string)}
+                      <TableCell className="text-sm">{r.loket}</TableCell>
+                      <TableCell className="text-sm">{r.jaminan}</TableCell>
+                      <TableCell className="text-sm">{r.layanan}</TableCell>
+                      <TableCell className="text-sm">{r.nama}</TableCell>
+                      <TableCell className="text-sm">{r.no_mr}</TableCell>
+                      <TableCell className="text-sm">{r.no_hp}</TableCell>
+                      {SURVEY_QUESTIONS.map((q) => (
+                        <TableCell key={q.id} className="text-sm">
+                          {r[QUESTION_FIELD_MAP[q.id]]}
+                        </TableCell>
+                      ))}
+                      {SURVEY_QUESTIONS.map((q) => (
+                        <TableCell key={`score-${q.id}`} className="text-sm text-center font-medium">
+                          {getAnswerScore(q.id, r[QUESTION_FIELD_MAP[q.id]] as string)}
+                        </TableCell>
+                      ))}
+                      <TableCell className="text-sm text-center font-bold">
+                        {totalScore}
                       </TableCell>
-                    ))}
-                    <TableCell className="text-sm text-center font-bold">
-                      {getTotalScore(r as unknown as Record<string, string>)}
-                    </TableCell>
-                    <TableCell className="text-sm max-w-[200px] truncate">{r.kritik_saran || "-"}</TableCell>
-                  </TableRow>
-                ))}
+                      <TableCell className="text-center">
+                        <span className="px-2 py-0.5 rounded-full text-xs font-medium text-white whitespace-nowrap" style={{ backgroundColor: CATEGORY_COLORS[category] }}>
+                          {category}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-sm max-w-[200px] truncate">{r.kritik_saran || "-"}</TableCell>
+                    </TableRow>
+                  );
+                })}
                 {filteredResponses.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={7 + SURVEY_QUESTIONS.length * 2 + 2} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={9 + SURVEY_QUESTIONS.length * 2 + 2} className="text-center text-muted-foreground py-8">
                       Belum ada data survei
                     </TableCell>
                   </TableRow>
