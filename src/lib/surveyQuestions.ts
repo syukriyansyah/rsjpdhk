@@ -43,3 +43,25 @@ export const SURVEY_QUESTIONS: SurveyQuestion[] = [
     options: ["Sangat Baik", "Baik", "Kurang Baik", "Tidak Baik"],
   },
 ];
+
+// Scoring: option index 0 (A) = 20, 1 (B) = 17, 2 (C) = 14, 3 (D) = 10
+export const OPTION_SCORES = [20, 17, 14, 10] as const;
+export const MAX_SCORE_PER_QUESTION = 20;
+export const MAX_TOTAL_SCORE = MAX_SCORE_PER_QUESTION * SURVEY_QUESTIONS.length; // 100
+
+/** Get the score for a single answer based on its question */
+export function getAnswerScore(questionId: string, answer: string): number {
+  const question = SURVEY_QUESTIONS.find((q) => q.id === questionId);
+  if (!question) return 0;
+  const index = question.options.indexOf(answer);
+  if (index < 0 || index >= OPTION_SCORES.length) return 0;
+  return OPTION_SCORES[index];
+}
+
+/** Calculate total score for a respondent across all questions */
+export function getTotalScore(response: Record<string, string>): number {
+  return SURVEY_QUESTIONS.reduce(
+    (sum, q) => sum + getAnswerScore(q.id, response[q.id] || ""),
+    0
+  );
+}

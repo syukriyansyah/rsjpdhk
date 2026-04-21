@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { SURVEY_QUESTIONS, LOKET_OPTIONS, JAMINAN_OPTIONS } from "@/lib/surveyQuestions";
+import { SURVEY_QUESTIONS, LOKET_OPTIONS, JAMINAN_OPTIONS, getAnswerScore, getTotalScore, MAX_TOTAL_SCORE } from "@/lib/surveyQuestions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend } from "recharts";
-import { LogOut, Users, FileDown, ClipboardList, ChevronLeft, ChevronRight } from "lucide-react";
+import { LogOut, Users, FileDown, ClipboardList, ChevronLeft, ChevronRight, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
 
 interface SurveyResponse {
@@ -106,7 +106,8 @@ const AdminDashboard = () => {
   };
 
   const exportCSV = () => {
-    const headers = ["Tanggal", "Loket", "Jaminan", "Nama", "No MR", "No HP", ...SURVEY_QUESTIONS.map(q => q.label), "Kritik & Saran"];
+    const scoreHeaders = SURVEY_QUESTIONS.map(q => `Skor: ${q.label}`);
+    const headers = ["Tanggal", "Loket", "Jaminan", "Nama", "No MR", "No HP", ...SURVEY_QUESTIONS.map(q => q.label), ...scoreHeaders, "Total Skor", "Kritik & Saran"];
     const rows = filteredResponses.map((r) => [
       new Date(r.created_at).toLocaleDateString("id-ID"),
       r.loket,
@@ -119,6 +120,8 @@ const AdminDashboard = () => {
       r.metode_pembayaran,
       r.keramahan_petugas,
       r.komunikasi_petugas,
+      ...SURVEY_QUESTIONS.map(q => getAnswerScore(q.id, r[QUESTION_FIELD_MAP[q.id]] as string).toString()),
+      getTotalScore(r as unknown as Record<string, string>).toString(),
       r.kritik_saran || "",
     ]);
 
@@ -167,7 +170,7 @@ const AdminDashboard = () => {
 
       <main className="max-w-6xl mx-auto px-4 py-6 space-y-6">
         {/* Stats */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
           <Card>
             <CardContent className="pt-6 flex items-center gap-4">
               <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
@@ -187,6 +190,22 @@ const AdminDashboard = () => {
               <div>
                 <p className="text-sm text-muted-foreground">Responden (Filter)</p>
                 <p className="text-2xl font-bold">{filteredResponses.length}</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6 flex items-center gap-4">
+              <div className="w-12 h-12 rounded-lg bg-yellow-500/10 flex items-center justify-center">
+                <TrendingUp className="w-6 h-6 text-yellow-600" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Rata-rata Skor</p>
+                <p className="text-2xl font-bold">
+                  {filteredResponses.length > 0
+                    ? (filteredResponses.reduce((sum, r) => sum + getTotalScore(r as unknown as Record<string, string>), 0) / filteredResponses.length).toFixed(1)
+                    : "0"}
+                  <span className="text-sm font-normal text-muted-foreground"> / {MAX_TOTAL_SCORE}</span>
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -345,6 +364,10 @@ const AdminDashboard = () => {
                       {q.label}
                     </TableHead>
                   ))}
+                  {SURVEY_QUESTIONS.map((q) => (
+                    <TableHead key={`score-${q.id}`} className="whitespace-nowrap text-center text-xs">Skor</TableHead>
+                  ))}
+                  <TableHead className="whitespace-nowrap text-center">Total Skor</TableHead>
                   <TableHead className="whitespace-nowrap">Kritik & Saran</TableHead>
                 </TableRow>
               </TableHeader>
@@ -365,12 +388,20 @@ const AdminDashboard = () => {
                         {r[QUESTION_FIELD_MAP[q.id]]}
                       </TableCell>
                     ))}
+                    {SURVEY_QUESTIONS.map((q) => (
+                      <TableCell key={`score-${q.id}`} className="text-sm text-center font-medium">
+                        {getAnswerScore(q.id, r[QUESTION_FIELD_MAP[q.id]] as string)}
+                      </TableCell>
+                    ))}
+                    <TableCell className="text-sm text-center font-bold">
+                      {getTotalScore(r as unknown as Record<string, string>)}
+                    </TableCell>
                     <TableCell className="text-sm max-w-[200px] truncate">{r.kritik_saran || "-"}</TableCell>
                   </TableRow>
                 ))}
                 {filteredResponses.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={7 + SURVEY_QUESTIONS.length + 1} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={7 + SURVEY_QUESTIONS.length * 2 + 2} className="text-center text-muted-foreground py-8">
                       Belum ada data survei
                     </TableCell>
                   </TableRow>
