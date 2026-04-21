@@ -19,12 +19,10 @@ export type Database = {
           created_at: string
           id: string
           informasi_keuangan: string
-          jaminan: string
           kecepatan_pelayanan: string
           keramahan_petugas: string
           komunikasi_petugas: string
           kritik_saran: string | null
-          layanan: string
           loket: string
           metode_pembayaran: string
           nama: string
@@ -35,12 +33,10 @@ export type Database = {
           created_at?: string
           id?: string
           informasi_keuangan: string
-          jaminan: string
           kecepatan_pelayanan: string
           keramahan_petugas: string
           komunikasi_petugas: string
           kritik_saran?: string | null
-          layanan: string
           loket: string
           metode_pembayaran: string
           nama: string
@@ -51,12 +47,10 @@ export type Database = {
           created_at?: string
           id?: string
           informasi_keuangan?: string
-          jaminan?: string
           kecepatan_pelayanan?: string
           keramahan_petugas?: string
           komunikasi_petugas?: string
           kritik_saran?: string | null
-          layanan?: string
           loket?: string
           metode_pembayaran?: string
           nama?: string
