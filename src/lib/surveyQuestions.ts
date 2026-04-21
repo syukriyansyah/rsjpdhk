@@ -1,6 +1,9 @@
 export const LOKET_OPTIONS = [
-  "Rawat Jalan",
+  "Rawat Jalan Umum",
+  "Rawat Jalan Eksekutif",
   "Rawat Inap",
+  "Verifikasi C1",
+  "Verifikasi C2",
 ] as const;
 
 export const JAMINAN_OPTIONS = [
