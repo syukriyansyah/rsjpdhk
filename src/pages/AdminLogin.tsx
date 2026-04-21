@@ -49,11 +49,11 @@ const AdminLogin = () => {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="max-w-sm w-full shadow-lg">
         <CardHeader className="text-center space-y-2">
-          <div className="mx-auto w-20 h-20 bg-white rounded-xl shadow-sm border p-2 flex items-center justify-center mb-2">
+          <div className="mx-auto w-40 h-20 bg-white rounded-xl shadow-sm p-2 flex items-center justify-center mb-2">
             <img
-              src="/logo.png"
+              src="/rsdjp.png"
               alt="Logo RSJPDHK"
-              className="w-full h-full object-contain"
+              className="w-full h-full object-cover"
               onError={(e) => { e.currentTarget.src = '/placeholder.svg' }}
             />
           </div>

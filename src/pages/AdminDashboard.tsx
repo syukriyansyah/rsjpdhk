@@ -181,11 +181,11 @@ const AdminDashboard = () => {
       <header className="bg-primary text-primary-foreground py-4 px-4 shadow-md">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-white rounded flex items-center justify-center p-1 shadow-sm overflow-hidden">
+            <div className="w-40 h-12 bg-white rounded-xl flex items-center justify-center p-1 shadow-sm overflow-hidden">
               <img
-                src="/logo.png"
+                src="/rsdjp.png"
                 alt="Logo RSJPDHK"
-                className="w-full h-full object-contain"
+                className="w-full h-full object-cover"
                 onError={(e) => { e.currentTarget.src = '/placeholder.svg' }}
               />
             </div>
