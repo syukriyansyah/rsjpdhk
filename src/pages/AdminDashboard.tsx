@@ -8,8 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend } from "recharts";
-import { LogOut, Users, FileDown, ClipboardList, ChevronLeft, ChevronRight, TrendingUp } from "lucide-react";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend, LabelList } from "recharts";
+import { LogOut, Users, FileDown, ChevronLeft, ChevronRight, TrendingUp, Trash2, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 
 interface SurveyResponse {
@@ -49,6 +49,7 @@ const AdminDashboard = () => {
   const [filterDateFrom, setFilterDateFrom] = useState("");
   const [filterDateTo, setFilterDateTo] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -126,6 +127,17 @@ const AdminDashboard = () => {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     navigate("/admin");
+  };
+
+  const handleDelete = async (id: string) => {
+    const { error } = await supabase.from("survey_responses").delete().eq("id", id);
+    if (error) {
+      toast.error("Gagal menghapus data");
+    } else {
+      toast.success("Data berhasil dihapus");
+      setResponses((prev) => prev.filter((r) => r.id !== id));
+    }
+    setDeleteConfirmId(null);
   };
 
   const exportCSV = () => {
@@ -322,26 +334,32 @@ const AdminDashboard = () => {
               <CardTitle className="text-base font-semibold">{title}</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Average Score Bar Chart */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                {/* Distribusi Jumlah Pasien Pie Chart */}
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground mb-2">Rata-rata Skor & Kategori</p>
+                  <p className="text-sm font-medium text-muted-foreground mb-2">Distribusi Jumlah Pasien</p>
                   <div className="h-56">
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={data} layout="vertical">
-                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(210,20%,90%)" />
-                        <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 11 }} />
-                        <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={120} />
-                        <Tooltip
-                          formatter={(value: number) => [`${value} / ${MAX_TOTAL_SCORE}`, "Rata-rata Skor"]}
-                          labelFormatter={(label) => `${label}`}
-                        />
-                        <Bar dataKey="avgScore" radius={[0, 4, 4, 0]}>
-                          {data.map((entry, i) => (
-                            <Cell key={i} fill={CATEGORY_COLORS[entry.category] || CHART_COLORS[i % CHART_COLORS.length]} />
+                      <PieChart>
+                        <Pie
+                          data={data.filter((d) => d.count > 0)}
+                          dataKey="count"
+                          nameKey="name"
+                          cx="50%"
+                          cy="50%"
+                          outerRadius={65}
+                          label={({ name, percent, value }) => 
+                            `${name} ${(percent * 100).toFixed(1)}% (${value})`
+                          }
+                          labelLine={true}
+                          fontSize={10}
+                        >
+                          {data.map((_, i) => (
+                            <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
                           ))}
-                        </Bar>
-                      </BarChart>
+                        </Pie>
+                        <Tooltip formatter={(value: number, name: string) => [`${value} pasien`, name]} />
+                      </PieChart>
                     </ResponsiveContainer>
                   </div>
                 </div>
@@ -377,36 +395,39 @@ const AdminDashboard = () => {
                 </div>
               </div>
               {/* Summary Table */}
-              <Table className="mt-4">
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Kelompok</TableHead>
-                    <TableHead className="text-right">Jumlah</TableHead>
-                    <TableHead className="text-right">Rata-rata Skor</TableHead>
-                    <TableHead className="text-center">Kategori</TableHead>
-                    {SCORE_CATEGORIES.map((cat) => (
-                      <TableHead key={cat} className="text-center text-xs">{cat}</TableHead>
-                    ))}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {data.map((d) => (
-                    <TableRow key={d.name}>
-                      <TableCell className="font-medium">{d.name}</TableCell>
-                      <TableCell className="text-right">{d.count}</TableCell>
-                      <TableCell className="text-right font-semibold">{d.avgScore}</TableCell>
-                      <TableCell className="text-center">
-                        <span className="px-2 py-0.5 rounded-full text-xs font-medium text-white" style={{ backgroundColor: CATEGORY_COLORS[d.category] || "#888" }}>
-                          {d.category}
-                        </span>
-                      </TableCell>
-                      {d.categoryCounts.map((cc) => (
-                        <TableCell key={cc.name} className="text-center">{cc.count}</TableCell>
+              <div>
+                <p className="text-sm font-medium text-muted-foreground mb-2">Ringkasan</p>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Kelompok</TableHead>
+                      <TableHead className="text-right">Jumlah</TableHead>
+                      <TableHead className="text-right">Rata-rata Skor</TableHead>
+                      <TableHead className="text-center">Kategori</TableHead>
+                      {SCORE_CATEGORIES.map((cat) => (
+                        <TableHead key={cat} className="text-center text-xs">{cat}</TableHead>
                       ))}
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {data.map((d) => (
+                      <TableRow key={d.name}>
+                        <TableCell className="font-medium">{d.name}</TableCell>
+                        <TableCell className="text-right">{d.count}</TableCell>
+                        <TableCell className="text-right font-semibold">{d.avgScore}</TableCell>
+                        <TableCell className="text-center">
+                          <span className="px-2 py-0.5 rounded-full text-xs font-medium text-white" style={{ backgroundColor: CATEGORY_COLORS[d.category] || "#888" }}>
+                            {d.category}
+                          </span>
+                        </TableCell>
+                        {d.categoryCounts.map((cc) => (
+                          <TableCell key={cc.name} className="text-center">{cc.count}</TableCell>
+                        ))}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             </CardContent>
           </Card>
         ))}
@@ -420,25 +441,9 @@ const AdminDashboard = () => {
                 <CardTitle className="text-sm font-semibold leading-snug">{q.label}</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                  {/* Bar Chart */}
-                  <div className="h-52">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={stats}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(210,20%,90%)" />
-                        <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                        <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
-                        <Tooltip />
-                        <Bar dataKey="count" radius={[4, 4, 0, 0]}>
-                          {stats.map((_, i) => (
-                            <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
-                          ))}
-                        </Bar>
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   {/* Pie Chart */}
-                  <div className="h-52">
+                  <div className="h-64">
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
                         <Pie
@@ -447,16 +452,18 @@ const AdminDashboard = () => {
                           nameKey="name"
                           cx="50%"
                           cy="50%"
-                          outerRadius={70}
-                          label={({ name, percent }) => `${name.split(" ").pop()} ${(percent * 100).toFixed(0)}%`}
-                          labelLine={false}
+                          outerRadius={65}
+                          label={({ name, percent, count }) =>
+                            `${name} ${(percent * 100).toFixed(1)}% (${count})`
+                          }
+                          labelLine={true}
                           fontSize={10}
                         >
                           {stats.map((_, i) => (
                             <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
                           ))}
                         </Pie>
-                        <Tooltip />
+                        <Tooltip formatter={(value: number, name: string) => [`${value} responden`, name]} />
                       </PieChart>
                     </ResponsiveContainer>
                   </div>
@@ -489,6 +496,168 @@ const AdminDashboard = () => {
           );
         })}
 
+        {/* Satisfaction Summary: Bar Chart + Table per Question */}
+        {(() => {
+          const qStats = SURVEY_QUESTIONS.map((q) => {
+            const opts = q.options;
+            // Count each option for this specific question
+            const counts = opts.map((opt) =>
+              filteredResponses.filter((r) => r[QUESTION_FIELD_MAP[q.id]] === opt).length
+            );
+            // Total respondents who answered this question
+            const totalAnswered = counts.reduce((s, c) => s + c, 0);
+            // "Sangat [X]" = index 0, "[X]" = index 1
+            const sangatPuas = counts[0];
+            const puas = counts[1];
+            const satisfied = sangatPuas + puas;
+            // Divide by per-question total (not global n) for accurate per-indicator %
+            const pctSangatPuas = totalAnswered > 0 ? (sangatPuas / totalAnswered) * 100 : 0;
+            const pctPuas = totalAnswered > 0 ? (puas / totalAnswered) * 100 : 0;
+            const pctKepuasan = totalAnswered > 0 ? (satisfied / totalAnswered) * 100 : 0;
+            return {
+              shortLabel: q.label
+                .replace(/^Apakah Anda /i, "")
+                .replace(/^Bagaimana pendapat Anda tentang /i, "")
+                .replace(/^Bagaimana pendapat Anda mengenai cara /i, ""),
+              pctSangatPuas,
+              pctPuas,
+              pctKepuasan,
+              totalAnswered,
+              sangatPuasCount: sangatPuas,
+              puasCount: puas,
+            };
+          });
+
+          const avgSangatPuas = qStats.reduce((s, q) => s + q.pctSangatPuas, 0) / qStats.length;
+          const avgPuas = qStats.reduce((s, q) => s + q.pctPuas, 0) / qStats.length;
+          const avgKepuasan = qStats.reduce((s, q) => s + q.pctKepuasan, 0) / qStats.length;
+
+          const chartData = qStats.map((q, i) => ({
+            name: `P${i + 1}`,
+            "Sangat Puas": parseFloat(q.pctSangatPuas.toFixed(2)),
+            "Puas": parseFloat(q.pctPuas.toFixed(2)),
+            sangatPuasLabel: q.pctSangatPuas > 5 ? `${q.pctSangatPuas.toFixed(1)}% (${q.sangatPuasCount})` : "",
+            puasLabel: q.pctPuas > 5 ? `${q.pctPuas.toFixed(1)}% (${q.puasCount})` : "",
+            sangatPuasTooltip: `${q.pctSangatPuas.toFixed(2)}% (${q.sangatPuasCount} responden)`,
+            puasTooltip: `${q.pctPuas.toFixed(2)}% (${q.puasCount} responden)`,
+          }));
+
+          return (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base font-semibold">Ringkasan Kepuasan per Indikator</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Bar Chart */}
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground mb-3">Grafik Persentase Kepuasan (%)</p>
+                    <div className="h-64">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={chartData} layout="vertical" margin={{ left: 8, right: 40, top: 4, bottom: 4 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="hsl(210,20%,90%)" horizontal={false} />
+                          <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 10 }} tickFormatter={(v) => `${v}%`} />
+                          <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fontWeight: 600 }} width={28} />
+                          <Tooltip formatter={(value: number, name: string, props: any) => [
+                            name === "Sangat Puas" ? props.payload.sangatPuasTooltip : props.payload.puasTooltip,
+                            name
+                          ]} />
+                          <Bar dataKey="Sangat Puas" stackId="a" fill="#1e7ab5" radius={[0, 0, 0, 0]}>
+                            <LabelList dataKey="sangatPuasLabel" position="inside" style={{ fill: "#fff", fontSize: 10, fontWeight: 600 }} />
+                          </Bar>
+                          <Bar dataKey="Puas" stackId="a" fill="#22a87d" radius={[0, 4, 4, 0]}>
+                            <LabelList dataKey="puasLabel" position="insideRight" style={{ fill: "#fff", fontSize: 10, fontWeight: 600 }} />
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                    <div className="flex items-center gap-4 mt-2 justify-center">
+                      <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <span className="inline-block w-3 h-3 rounded-sm" style={{ background: "#1e7ab5" }} /> Sangat Puas
+                      </span>
+                      <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <span className="inline-block w-3 h-3 rounded-sm" style={{ background: "#22a87d" }} /> Puas
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Satisfaction Table */}
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground mb-3">Tabel % Kepuasan per Indikator</p>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm border-collapse">
+                        <thead>
+                          <tr className="bg-muted/50">
+                            <th className="text-left px-2 py-1.5 text-xs font-semibold border border-border/50 w-7">No</th>
+                            <th className="text-left px-2 py-1.5 text-xs font-semibold border border-border/50">Indikator</th>
+                            <th className="text-center px-2 py-1.5 text-xs font-semibold border border-border/50 whitespace-nowrap" style={{ color: "#1e7ab5" }}>Sangat Puas</th>
+                            <th className="text-center px-2 py-1.5 text-xs font-semibold border border-border/50 whitespace-nowrap" style={{ color: "#22a87d" }}>Puas</th>
+                            <th className="text-center px-2 py-1.5 text-xs font-semibold border border-border/50 whitespace-nowrap">% Kepuasan</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {qStats.map((q, i) => (
+                            <tr key={i} className={i % 2 === 0 ? "bg-background" : "bg-muted/20"}>
+                              <td className="px-2 py-1.5 text-center text-xs border border-border/50 font-medium">{i + 1}</td>
+                              <td className="px-2 py-1.5 text-xs border border-border/50 leading-snug">{q.shortLabel}</td>
+                              <td className="px-2 py-1.5 text-center text-xs border border-border/50 font-medium" style={{ color: "#1e7ab5" }}>
+                                {q.pctSangatPuas.toFixed(2)}%
+                              </td>
+                              <td className="px-2 py-1.5 text-center text-xs border border-border/50 font-medium" style={{ color: "#22a87d" }}>
+                                {q.pctPuas.toFixed(2)}%
+                              </td>
+                              <td className="px-2 py-1.5 text-center text-xs border border-border/50 font-bold">
+                                {q.pctKepuasan.toFixed(2)}%
+                              </td>
+                            </tr>
+                          ))}
+                          {/* Average row */}
+                          <tr className="bg-primary/5 font-semibold">
+                            <td className="px-2 py-1.5 text-center text-xs border border-border/50" />
+                            <td className="px-2 py-1.5 text-xs border border-border/50 font-bold">Rata-rata</td>
+                            <td className="px-2 py-1.5 text-center text-xs border border-border/50 font-bold" style={{ color: "#1e7ab5" }}>
+                              {avgSangatPuas.toFixed(2)}%
+                            </td>
+                            <td className="px-2 py-1.5 text-center text-xs border border-border/50 font-bold" style={{ color: "#22a87d" }}>
+                              {avgPuas.toFixed(2)}%
+                            </td>
+                            <td className="px-2 py-1.5 text-center text-xs border border-border/50 font-bold">
+                              {avgKepuasan.toFixed(2)}%
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })()}
+
+        {/* Delete Confirmation Dialog */}
+        {deleteConfirmId && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+            <div className="bg-background rounded-xl shadow-xl p-6 max-w-sm w-full mx-4">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-10 h-10 rounded-full bg-destructive/10 flex items-center justify-center">
+                  <AlertTriangle className="w-5 h-5 text-destructive" />
+                </div>
+                <h3 className="font-semibold text-base">Konfirmasi Hapus</h3>
+              </div>
+              <p className="text-sm text-muted-foreground mb-5">
+                Apakah Anda yakin ingin menghapus data responden ini? Tindakan ini tidak dapat dibatalkan.
+              </p>
+              <div className="flex gap-3 justify-end">
+                <Button variant="outline" size="sm" onClick={() => setDeleteConfirmId(null)}>Batal</Button>
+                <Button variant="destructive" size="sm" onClick={() => handleDelete(deleteConfirmId)}>
+                  <Trash2 className="w-4 h-4 mr-1" /> Hapus
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Responses Table with full answers & pagination */}
         <Card>
           <CardHeader className="pb-3">
@@ -517,6 +686,7 @@ const AdminDashboard = () => {
                   <TableHead className="whitespace-nowrap text-center">Total Skor</TableHead>
                   <TableHead className="whitespace-nowrap text-center">Kategori</TableHead>
                   <TableHead className="whitespace-nowrap">Kritik & Saran</TableHead>
+                  <TableHead className="whitespace-nowrap text-center">Aksi</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -554,12 +724,23 @@ const AdminDashboard = () => {
                         </span>
                       </TableCell>
                       <TableCell className="text-sm max-w-[200px] truncate">{r.kritik_saran || "-"}</TableCell>
+                      <TableCell className="text-center">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10 h-7 w-7 p-0"
+                          onClick={() => setDeleteConfirmId(r.id)}
+                          title="Hapus data"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   );
                 })}
                 {filteredResponses.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={9 + SURVEY_QUESTIONS.length * 2 + 2} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={9 + SURVEY_QUESTIONS.length * 2 + 3} className="text-center text-muted-foreground py-8">
                       Belum ada data survei
                     </TableCell>
                   </TableRow>
