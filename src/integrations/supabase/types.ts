@@ -14,6 +14,18 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_users: {
+        Row: {
+          user_id: string
+        }
+        Insert: {
+          user_id: string
+        }
+        Update: {
+          user_id?: string
+        }
+        Relationships: []
+      }
       survey_responses: {
         Row: {
           created_at: string
@@ -35,12 +47,12 @@ export type Database = {
           created_at?: string
           id?: string
           informasi_keuangan: string
-          jaminan: string
+          jaminan?: string
           kecepatan_pelayanan: string
           keramahan_petugas: string
           komunikasi_petugas: string
           kritik_saran?: string | null
-          layanan: string
+          layanan?: string
           loket: string
           metode_pembayaran: string
           nama: string
@@ -70,7 +82,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      is_admin: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
       [_ in never]: never
