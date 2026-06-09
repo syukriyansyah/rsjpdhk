@@ -1,0 +1,1 @@
+CREATE POLICY "Only admins can delete surveys" ON public.survey_responses FOR DELETE TO authenticated USING (public.is_admin(auth.uid()));
